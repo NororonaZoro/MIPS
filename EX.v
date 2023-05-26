@@ -9,12 +9,20 @@ module EX(
     input wire[4:0] regcAddr_i, //译码后写入的寄存器地址，来自ID
     input wire regcWrite_i, //译码后写入使能信号，来自ID
 
+    input wire[31:0] rHiData,
+    input wire[31:0] rLoData,
+
     output reg[31:0] regcData, //执行/运算后目的操作数C(结果)，流入寄存器组
     output wire[4:0] regcAddr, //执行后写入的地址，流入寄存器组
     output wire regcWrite, //执行后写使能信号，控制写入寄存器组
     output wire[5:0] op, //判断读写寄存器or内存，传给访存模块
     output wire[31:0] memAddr,//访存地址，传给访存模块
-    output wire[31:0] memData //访存数据，传给访存模块
+    output wire[31:0] memData, //访存数据，传给访存模块
+	
+    output reg whi,
+    output reg wlo,
+    output reg[31:0] wHiData,
+    output reg[31:0] wLoData
 );
 
     assign op = op_i;
@@ -62,6 +70,37 @@ module EX(
             //J型
             `op_jal:
                 regcData <= regaData;
+				
+			//乘法除法
+            `op_mult:
+                begin
+                 whi <= `VALID;
+                 wlo <= `VALID;
+                 {wHiData,wLoData} <= $signed(regaData) * $signed(regbData);
+                end
+			
+            `op_multu:
+                begin
+                 whi <= `VALID;
+                 wlo <= `VALID;
+                 {wHiData,wLoData} <= regaData * regbData;
+                end
+				
+            `op_div:
+                begin
+                 whi <= `VALID;
+                 wlo <= `VALID;
+                 wHiData <= $signed(regaData) % $signed(regbData);
+                 wLoData <= $signed(regaData) / $signed(regbData);
+                end
+				
+            `op_divu:
+                begin
+                 whi <= `VALID;
+                 wlo <= `VALID;
+                 wHiData <= regaData % regbData;
+                 wLoData <= regaData / regbData;
+                end
             default:
                 regcData <= `ZERO;
             endcase

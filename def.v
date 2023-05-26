@@ -33,6 +33,12 @@
 `define code_sra 6'b000011
 `define code_jr  6'b001000
 
+//乘除法指令
+`define code_mult  6'b011000
+`define code_multu 6'b011001
+`define code_div   6'b011010
+`define code_divu  6'b011011
+
 //load-store型指令
 `define code_lw 6'b100011
 `define code_sw 6'b101011
@@ -61,6 +67,12 @@
 `define op_srl 6'b001001
 `define op_sra 6'b001010
 `define op_jr  6'b001011
+
+//乘除法指令
+`define op_mult  6'b010000
+`define op_multu 6'b010001
+`define op_div   6'b010010
+`define op_divu  6'b010011
 
 //J型指令
 `define op_j   6'b001100

@@ -210,6 +210,7 @@ module ID(
                         regcAddr <= code[15:11];
                         imm <= code[10:6];
                     end
+					
                      `code_jr:
                     begin
                         op <= `op_jr;
@@ -222,6 +223,55 @@ module ID(
                         jAddr <= regaData[31:0];
                         jCe <= `VALID;
                     end
+					
+					`code_mult: //mult指令，a为rs,b为rt,c为rd, {hi,lo} = rs * rt
+                    begin
+                        op <= `op_mult;
+                        regaRead <= `VALID;
+                        regbRead <= `VALID;
+                        regcWrite <= `INVALID;
+                        regaAddr <= code[25:21];
+                        regbAddr <= code[20:16];
+                        regcAddr <= `ZERO;
+                        imm <= `ZERO; 
+                    end
+					
+					`code_multu: //multu指令，a为rs,b为rt,c为rd, {hi,lo} = rs * rt
+                    begin
+                        op <= `op_multu;
+                        regaRead <= `VALID;
+                        regbRead <= `VALID;
+                        regcWrite <= `INVALID;
+                        regaAddr <= code[25:21];
+                        regbAddr <= code[20:16];
+                        regcAddr <= `ZERO;
+                        imm <= `ZERO; 
+                    end
+					
+					`code_div: //div指令，a为rs,b为rt,c为rd, {hi,lo} = rs / rt
+                    begin
+                        op <= `op_divu;
+                        regaRead <= `VALID;
+                        regbRead <= `VALID;
+                        regcWrite <= `INVALID;
+                        regaAddr <= code[25:21];
+                        regbAddr <= code[20:16];
+                        regcAddr <= `ZERO;
+                        imm <= `ZERO; 
+                    end
+					
+					`code_divu: //divu指令，a为rs,b为rt,c为rd, {hi,lo} = rs / rt
+                    begin
+                        op <= `op_mult;
+                        regaRead <= `VALID;
+                        regbRead <= `VALID;
+                        regcWrite <= `INVALID;
+                        regaAddr <= code[25:21];
+                        regbAddr <= code[20:16];
+                        regcAddr <= `ZERO;
+                        imm <= `ZERO; 
+                    end
+					
                     default:
                     begin
                     op <= `op_nop;
