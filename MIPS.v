@@ -41,12 +41,19 @@ module MIPS(
     wire[5:0] op_EX;
     wire[31:0] memAddr_EX;
     wire[31:0] memData_EX;
+    wire whi_EX;
+    wire wlo_EX;
+    wire[31:0] wHiData_EX;
+    wire[31:0] wLoData_EX;
 
     wire[31:0] regData_MEM;
     wire[4:0] regAddr_MEM;
     wire regWrite_MEM;
 
 
+    wire[31:0] rHiData_HiLo;
+    wire[31:0] rLoData_HiLo;
+	
     IF if0(
         .clk(clk),
         .rst(rst),
@@ -82,14 +89,31 @@ module MIPS(
         .regbData(regbData_ID),
         .regcAddr_i(regcAddr_ID),
         .regcWrite_i(regcWrite_ID),
+        .rHiData(rHiData_HiLo),
+        .rLoData(rLoData_HiLo),
         .regcData(regcData_EX),
         .regcAddr(regcAddr_EX),
         .regcWrite(regcWrite_EX),
         .op(op_EX),
         .memAddr(memAddr_EX),
-        .memData(memData_EX)
+        .memData(memData_EX),
+        .whi(whi_EX),
+        .wlo(wlo_EX),
+        .wHiData(wHiData_EX),
+        .wLoData(wLoData_EX)
     );
     
+    HiLo hilo0(
+        .rst(rst),
+        .clk(clk),
+        .wHiData(wHiData_EX),
+        .wLoData(wLoData_EX),
+        .whi(whi_EX),
+        .wlo(wlo_EX),
+        .rHiData(rHiData_HiLo),
+        .rLoData(rLoData_HiLo)
+	);
+	
     MEM mem0(
         .rst(rst),
         .op(op_EX),
