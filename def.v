@@ -21,6 +21,9 @@
 `define code_beq 6'b000100
 `define code_bne 6'b000101
 
+`define code_bgtz 6'b000111
+`define code_bltz 6'b000001
+
 //R型指令
 `define code_r   6'b000000
 `define code_add 6'b100000
@@ -33,9 +36,26 @@
 `define code_sra 6'b000011
 `define code_jr  6'b001000
 
+//乘除法指令
+`define code_mult  6'b011000
+`define code_multu 6'b011001
+`define code_div   6'b011010
+`define code_divu  6'b011011
+
+`define code_slt  6'b101010
+`define code_jalr 6'b001001
+`define code_mfhi 6'b010000
+`define code_mflo 6'b010010
+`define code_mthi 6'b010001
+`define code_mtlo 6'b010011
+
 //load-store型指令
 `define code_lw 6'b100011
 `define code_sw 6'b101011
+
+//wait
+`define code_ll 6'b110000
+`define code_sc 6'b111000
 
 //J型指令
 `define code_j 6'b000010
@@ -51,6 +71,9 @@
 `define op_beq 6'b000001
 `define op_bne 6'b000010
 
+`define op_bgtz 6'b011010
+`define op_bltz 6'b011011
+
 //R型指令
 `define op_add 6'b000011
 `define op_sub 6'b000100
@@ -62,9 +85,26 @@
 `define op_sra 6'b001010
 `define op_jr  6'b001011
 
+//乘除法指令
+`define op_mult  6'b010000
+`define op_multu 6'b010001
+`define op_div   6'b010010
+`define op_divu  6'b010011
+
+`define op_slt  6'b010100
+`define op_jalr 6'b010101
+`define op_mfhi 6'b010110
+`define op_mflo 6'b010111
+`define op_mthi 6'b011000
+`define op_mtlo 6'b011001
+
 //J型指令
 `define op_j   6'b001100
 `define op_jal 6'b001101
+
+//wait
+`define op_ll 6'b011100
+`define op_sc 6'b011101
 
 //load-store型指令
 `define op_lw 6'b001110

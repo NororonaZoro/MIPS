@@ -19,14 +19,22 @@ module MEM(
     output wire[31:0] memAddr,
     output reg[31:0] memwriteData,
     output reg memWrite,
-    output reg memCe
+    output reg memCe,
+
+    input wire rLLbit,
+    output reg wLLbit,
+    output reg wbit
 );
     assign regAddr = regcAddr;
     assign regWrite = regcWrite;
     assign memAddr = memAddr_i;
     //透传
-    assign regData = (op == `op_lw)?memreadData:regcData;
+    //assign regData = (op == `op_lw || op == `op_ll)?memreadData:regcData;
     //若为load指令，则将赋值从mem读取的数据，否则赋值结果寄存器数据
+    assign regData = (op == `op_lw || op == `op_ll) ? memreadData :
+                     (op != `op_sc) ? regcData : 
+                     (op == `op_sc && rLLbit == `VALID) ? 32'b1 : 32'b0;
+
 
     //根据读写指令对内存进行操作
     always @(*)
@@ -53,6 +61,29 @@ module MEM(
                 memWrite <= `VALID;
                 memCe <= `VALID;
             end
+
+            `op_ll:
+            begin
+                memwriteData <= `ZERO;
+                memWrite <= `INVALID;
+                memCe <= `VALID;
+                wbit <= `VALID;
+                wLLbit <= `VALID;
+            end
+
+            `op_sc:
+            begin
+                if(rLLbit == `VALID) 
+                  begin
+                    memwriteData <= memData_i;
+                    memWrite <= `VALID;
+                    memCe <= `VALID;
+		    wbit <= `VALID;
+                    wLLbit <= `INVALID;
+                  end
+                else ;
+            end
+
             default:
             begin
                 memwriteData <= `ZERO;
