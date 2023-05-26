@@ -18,6 +18,11 @@ module SoC(
     wire[31:0] data_InstMem;
     wire[31:0] data_DataMem;
 
+    wire[5:0] intr;
+    wire intimer;
+
+    assign intr = {5'b0, intimer};
+
 
     InstMem instmem0(
         .ce(romCe_MIPS),
@@ -45,7 +50,9 @@ module SoC(
         .memAddr_MEM(memAddr_MIPS),
         .memwriteData_MEM(memwriteData_MIPS),
         .memWrite_MEM(memWrite_MIPS),
-        .memCe_MEM(memCe_MIPS)
+        .memCe_MEM(memCe_MIPS),
+        .intr(intr),
+        .intimer(intimer)
     );
 endmodule
 

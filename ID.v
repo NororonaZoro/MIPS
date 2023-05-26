@@ -2,7 +2,7 @@
 
 module ID(
     input wire rst, //复位信号，来自MIPS CPU
-    input wire[31:0] pc, //程序计数器，来自IF模块
+    input wire[31:0] pc_i, //程序计数器，来自IF模块
     input wire[31:0] code, //32位指令字，来自指令ROM
     input wire[31:0] regaData_i, //源操作数1，来自寄存器组
     input wire[31:0] regbData_i, //源操作数2，来自寄存器组
@@ -17,18 +17,24 @@ module ID(
     output reg[4:0] regaAddr, //译码后源操作数1的寄存器地址
     output reg regaRead, //译码后操作数1的寄存器读信号 选择立即数 or 寄存器
     output reg[4:0] regbAddr, //译码后源操作数2的寄存器地址
-    output reg regbRead //译码后操作数2的寄存器读信号 选择立即数 or 寄存器
-    
+    output reg regbRead, //译码后操作数2的寄存器读信号 选择立即数 or 寄存器
+    output wire[31:0] pc,
+    output wire[31:0] excptype
 );
     wire[5:0] code_op; //指令中的操作码[31:26]，与译码后操作码不同
     wire[5:0] func; //指令中第二操作码[5:0],主要用于R型指令
     reg[31:0] imm; //指令中提取的立即数
-    wire[31:0] npc; //下一条指令的地址 pc + 4,主要用于jal指令
-
+    wire[31:0] npc = pc + 4; //下一条指令的地址 pc + 4,主要用于jal指令
+    reg is_syscall;
+    reg is_eret;
+    
     assign code_op = code[31:26];
     assign func = code[5:0];
-    assign npc = pc + 4;
+    //assign npc = pc + 4;
     //组合逻辑语句块，根据rst与指令操作码确定：1.寄存器读信号 立即数 or 寄存器 2.目的操作数是否需要写回，及写回地址
+    assign pc = pc_i;
+    assign excptype = {22'b0,is_eret,is_syscall,8'b0};
+
     always@(*) 
     begin
         //复位信号有效
@@ -44,13 +50,47 @@ module ID(
             imm <= `ZERO;
             jCe <= `INVALID;
             jAddr <= `ZERO;
+            is_eret <= `INVALID;
+            is_syscall <= `INVALID; 
+        end
+        else if(code == `code_eret)
+        begin
+            op <= `op_eret;
+            regaRead <= `INVALID;
+            regbRead <= `INVALID;
+            regcWrite <= `INVALID;
+            regaAddr <= `ZERO;
+            regbAddr <= `ZERO;
+            regcAddr <= `ZERO;
+            imm <= `ZERO;
+            jCe <= `INVALID;
+            jAddr <= `ZERO;
+            is_eret <= `VALID;
+            is_syscall <= `INVALID;
+        end
+        else if(code == `code_syscall)
+        begin
+            op <= `op_syscall;
+            regaRead <= `INVALID;
+            regbRead <= `INVALID;
+            regcWrite <= `INVALID;
+            regaAddr <= `ZERO;
+            regbAddr <= `ZERO;
+            regcAddr <= `ZERO;
+            imm <= `ZERO;
+            jCe <= `INVALID;
+            jAddr <= `ZERO;
+            is_eret <= `INVALID;
+            is_syscall <= `VALID;
         end
         else
         begin
             //先假设不跳转，清除使能和地址
             jCe <= `INVALID;
             jAddr <= `ZERO;
-
+            is_eret <= `INVALID;
+            is_syscall <= `INVALID;
+ 
             case(code_op)
             `code_ori: //ori指令，源a为寄存器，b为立即数，需要写入到目的寄存器
             begin
@@ -210,6 +250,7 @@ module ID(
                         regcAddr <= code[15:11];
                         imm <= code[10:6];
                     end
+					
                      `code_jr:
                     begin
                         op <= `op_jr;
@@ -222,16 +263,91 @@ module ID(
                         jAddr <= regaData[31:0];
                         jCe <= `VALID;
                     end
+
+                     `code_jalr:
+                    begin
+                        op <= `op_jalr;
+                        regaRead <= `VALID;
+                        regbRead <= `INVALID;
+                        regcWrite <= `VALID;
+                        regaAddr <= `ZERO;
+                        regbAddr <= `ZERO;
+                        regcAddr <= 5'b11111;
+                        jAddr <= regaData[31:0];
+                        jCe <= `VALID;
+                        imm <= npc;
+                    end
+					
+                     `code_mult: //mult指令，a为rs,b为rt,c为rd, {hi,lo} = rs * rt
+                    begin
+                        op <= `op_mult;
+                        regaRead <= `VALID;
+                        regbRead <= `VALID;
+                        regcWrite <= `INVALID;
+                        regaAddr <= code[25:21];
+                        regbAddr <= code[20:16];
+                        regcAddr <= `ZERO;
+                        imm <= `ZERO; 
+                    end
+					
+                     `code_multu: //multu指令，a为rs,b为rt,c为rd, {hi,lo} = rs * rt
+                    begin
+                        op <= `op_multu;
+                        regaRead <= `VALID;
+                        regbRead <= `VALID;
+                        regcWrite <= `INVALID;
+                        regaAddr <= code[25:21];
+                        regbAddr <= code[20:16];
+                        regcAddr <= `ZERO;
+                        imm <= `ZERO; 
+                    end
+					
+                     `code_div: //div指令，a为rs,b为rt,c为rd, {hi,lo} = rs / rt
+                    begin
+                        op <= `op_divu;
+                        regaRead <= `VALID;
+                        regbRead <= `VALID;
+                        regcWrite <= `INVALID;
+                        regaAddr <= code[25:21];
+                        regbAddr <= code[20:16];
+                        regcAddr <= `ZERO;
+                        imm <= `ZERO; 
+                    end
+					
+                     `code_divu: //divu指令，a为rs,b为rt,c为rd, {hi,lo} = rs / rt
+                    begin
+                        op <= `op_mult;
+                        regaRead <= `VALID;
+                        regbRead <= `VALID;
+                        regcWrite <= `INVALID;
+                        regaAddr <= code[25:21];
+                        regbAddr <= code[20:16];
+                        regcAddr <= `ZERO;
+                        imm <= `ZERO; 
+                    end
+
+                     `code_slt:
+                    begin
+                        op <= `op_slt;
+                        regaRead <= `VALID;
+                        regbRead <= `VALID;
+                        regcWrite <= `VALID;
+                        regaAddr <= code[25:21];
+                        regbAddr <= code[20:16];
+                        regcAddr <= code[15:11];
+                        imm <= `ZERO; 
+                    end
+					
                     default:
                     begin
-                    op <= `op_nop;
-                    regaRead <= `INVALID;
-                    regbRead <= `INVALID;
-                    regcWrite <= `INVALID;
-                    regaAddr <= `ZERO;
-                    regbAddr <= `ZERO;
-                    regcAddr <= `ZERO;
-                    imm <= `ZERO;
+                        op <= `op_nop;
+                        regaRead <= `INVALID;
+                        regbRead <= `INVALID;
+                        regcWrite <= `INVALID;
+                        regaAddr <= `ZERO;
+                        regbAddr <= `ZERO;
+                        regcAddr <= `ZERO;
+                        imm <= `ZERO;
                     end
                     endcase
             end
@@ -296,6 +412,38 @@ module ID(
                 end
             end
 
+            `code_bgtz:
+            begin
+                op <= `op_bgtz;
+                regaRead <= `VALID;
+                regbRead <= `VALID;
+                regcWrite <= `INVALID;
+                regaAddr <= code[25:21];
+                regbAddr <= code[20:16];
+                regcAddr <= `ZERO;
+                if(regaData > regbData)
+                begin
+                    jAddr <= npc + { {14{code[15]} },code[15:0],2'b00};
+                    jCe <= `VALID;
+                end
+            end
+
+            `code_bltz:
+            begin
+                op <= `op_bltz;
+                regaRead <= `VALID;
+                regbRead <= `VALID;
+                regcWrite <= `INVALID;
+                regaAddr <= code[25:21];
+                regbAddr <= code[20:16];
+                regcAddr <= `ZERO;
+                if(regaData < regbData)
+                begin
+                    jAddr <= npc + { {14{code[15]} },code[15:0],2'b00};
+                    jCe <= `VALID;
+                end
+            end
+
             `code_lw: //lw指令，源a寄存器值为指令[25:21]中基址，指令中[15:0]为内存偏移地址，作为立即数，需要写入寄存器
             begin
                 op <= `op_lw;
@@ -319,6 +467,69 @@ module ID(
                 regcAddr <= `ZERO;
                 imm <= { {16{code[15]} },code[15:0]};
             end
+            
+            `code_ll:
+            begin
+                op <= `op_ll;
+                regaRead <= `VALID;
+                regbRead <= `INVALID;
+                regcWrite <= `VALID;
+                regaAddr <= code[25:21];
+                regbAddr <= `ZERO;
+                regcAddr <= code[20:16];
+                imm <= { {16{code[15]} },code[15:0]};
+            end
+            
+            `code_sc: 
+            begin
+                op <= `op_sc;
+                regaRead <= `VALID;
+                regbRead <= `VALID;
+                regcWrite <= `VALID;
+                regaAddr <= code[25:21];
+                regbAddr <= code[20:16];
+                regcAddr <= code[20:16];
+                imm <= { {16{code[15]} },code[15:0]};
+            end
+
+            `code_cp0:
+                case(code[25:21])
+                   `code_mfc0:
+                    begin
+                       op <= `op_mfc0;
+                       regaRead <= `INVALID;
+                       regbRead <= `INVALID;
+                       regcWrite <= `VALID;
+                       regaAddr <= `ZERO;
+                       regbAddr <= `ZERO;
+                       regcAddr <= code[20:16];
+                       imm = {27'h0,code[15:11]};
+                    end
+
+                   `code_mtc0:
+                    begin
+                       op <= `op_mtc0;
+                       regaRead <= `INVALID;
+                       regbRead <= `INVALID;
+                       regcWrite <= `VALID;
+                       regaAddr <= `ZERO;
+                       regbAddr <= `ZERO;
+                       regcAddr <= code[20:16];
+                       imm = {27'h0,code[15:11]};
+                    end
+
+                    default:
+                    begin
+                       op <= `op_nop;
+                       regaRead <= `INVALID;
+                       regbRead <= `INVALID;
+                       regcWrite <= `INVALID;
+                       regaAddr <= `ZERO;
+                       regbAddr <= `ZERO;
+                       regcAddr <= `ZERO;
+                       imm <= `ZERO;
+                    end
+                endcase
             default:
             begin
                 op <= `op_nop;
@@ -341,7 +552,7 @@ module ID(
     begin
         if(rst == `RST_ENABLE)
             regaData <= `ZERO;
-        else if(op == `op_lw || op == `op_sw)
+        else if(op == `op_lw || op == `op_sw || op == `op_ll || op == `op_sc)
             regaData <= regaData_i + imm;//从寄存器值得到的基地址+偏移地址
         else if(regaRead == `VALID)
             regaData <= regaData_i;

@@ -6,7 +6,9 @@ module IF(
     input wire[31:0] jAddr, //转移地址，来自ID
     input wire jCe, //转移使能信号，来自ID
     output reg romCe,//指令存储器读使能信号
-    output reg[31:0] pc //程序计数器，传给指令ROM
+    output reg[31:0] pc, //程序计数器，传给指令ROM
+    input wire[31:0] ejpc,
+    input wire excpt
 );
 
     //该语句块为组合逻辑，根据rst只控制romCe
@@ -25,6 +27,8 @@ module IF(
     begin
         if(romCe == `ROMCE_DISABLE)
             pc <= `ZERO;
+        else if(excpt == 1'b1) //????????????pc
+            pc <= ejpc;
         else if(jCe == `VALID)
             pc <= jAddr;
         else
